@@ -1,7 +1,7 @@
 --[[
-    uqi's farm v9 // FINAL RECTIFICATION
-    Developer: uk1sha (Discord)
-    Logic: Tool Hotkey Simulation + Front-Door Teleport + 2-Min Forced Hop
+    uqi's farm v10 // THE MOBILE STANDARD
+    Optimized for Delta, Fluxus, and Vega X
+    Fixed: Non-Clip Door Distance + Raycast Offset
 ]]
 
 local Players = game:GetService("Players")
@@ -10,185 +10,159 @@ local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 -- --- CONFIG ---
 getgenv().Uqi = {
     Active = false,
-    FlameTool = "Flamethrower", -- Should be Slot 1
-    GunTool = "SilencerAR",     -- Should be Slot 2
+    FlameTool = "Flamethrower", -- Slot 1
+    GunTool = "SilencerAR",     -- Slot 2
     VaultPos = Vector3.new(-617, -31, -285),
-    StayDuration = 120, -- Guaranteed 2 Minutes
+    StayDuration = 120,
     StartTime = 0
 }
 
--- --- PREMIUM UI ---
-local Screen = Instance.new("ScreenGui", LocalPlayer.PlayerGui); Screen.Name = "UqiV9"; Screen.ResetOnSpawn = false
-local Main = Instance.new("Frame", Screen); Main.Size = UDim2.new(0, 360, 0, 320); Main.Position = UDim2.new(0.5, -180, 0.5, -160); Main.BackgroundColor3 = Color3.fromRGB(8, 8, 10); Main.BorderSizePixel = 0
+-- --- UI CONSTRUCTION (Sized for Mobile & Desktop) ---
+local Screen = Instance.new("ScreenGui", LocalPlayer.PlayerGui); Screen.Name = "UqiV10"; Screen.ResetOnSpawn = false
+local Main = Instance.new("Frame", Screen); Main.Size = UDim2.new(0, 300, 0, 280); Main.Position = UDim2.new(0.5, -150, 0.5, -140); Main.BackgroundColor3 = Color3.fromRGB(10, 10, 12); Main.BorderSizePixel = 0
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 15)
 
-local Grad = Instance.new("UIGradient", Main); Grad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(200, 0, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 0, 0))}
+local Grad = Instance.new("UIGradient", Main); Grad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 0, 0))}
 task.spawn(function() while true do game:GetService("TweenService"):Create(Grad, TweenInfo.new(4, Enum.EasingStyle.Linear), {Rotation = 360}):Play(); task.wait(4); Grad.Rotation = 0 end end)
 
-local Title = Instance.new("TextLabel", Main); Title.Size = UDim2.new(1, 0, 0, 50); Title.Text = "uqi's farm v9"; Title.TextColor3 = Color3.new(1,1,1); Title.Font = "FredokaOne"; Title.TextSize = 28; Title.BackgroundTransparency = 1
-local DC = Instance.new("TextLabel", Main); DC.Size = UDim2.new(1, 0, 0, 20); DC.Position = UDim2.new(0, 0, 0.15, 0); DC.Text = "uk1sha | v9 Ultimate"; DC.TextColor3 = Color3.fromRGB(88, 101, 242); DC.Font = "GothamBold"; DC.TextSize = 13; DC.BackgroundTransparency = 1
+local Title = Instance.new("TextLabel", Main); Title.Size = UDim2.new(1, 0, 0, 45); Title.Text = "uqi's farm v10"; Title.TextColor3 = Color3.new(1,1,1); Title.Font = "FredokaOne"; Title.TextSize = 24; Title.BackgroundTransparency = 1
+local DC = Instance.new("TextLabel", Main); DC.Size = UDim2.new(1, 0, 0, 20); DC.Position = UDim2.new(0, 0, 0.16, 0); DC.Text = "discord: uk1sha"; DC.TextColor3 = Color3.fromRGB(150, 150, 150); DC.Font = "Gotham"; DC.TextSize = 12; DC.BackgroundTransparency = 1
 
-local DebugFrame = Instance.new("ScrollingFrame", Main); DebugFrame.Size = UDim2.new(0.9, 0, 0, 110); DebugFrame.Position = UDim2.new(0.05, 0, 0.25, 0); DebugFrame.CanvasSize = UDim2.new(0, 0, 10, 0); DebugFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0); DebugFrame.BorderSizePixel = 0; DebugFrame.ScrollBarThickness = 2
-local DebugList = Instance.new("UIListLayout", DebugFrame); DebugList.Padding = UDim.new(0, 3)
+local Console = Instance.new("ScrollingFrame", Main); Console.Size = UDim2.new(0.9, 0, 0, 100); Console.Position = UDim2.new(0.05, 0, 0.25, 0); Console.BackgroundColor3 = Color3.new(0, 0, 0); Console.CanvasSize = UDim2.new(0, 0, 15, 0); Console.ScrollBarThickness = 0
+local List = Instance.new("UIListLayout", Console); List.Padding = UDim.new(0, 2)
 
-local TimerLbl = Instance.new("TextLabel", Main); TimerLbl.Size = UDim2.new(1, 0, 0, 30); TimerLbl.Position = UDim2.new(0, 0, 0.62, 0); TimerLbl.Text = "STATUS: IDLE"; TimerLbl.TextColor3 = Color3.new(1,1,1); TimerLbl.Font = "Code"; TimerLbl.TextSize = 16; TimerLbl.BackgroundTransparency = 1
+local Status = Instance.new("TextLabel", Main); Status.Size = UDim2.new(1, 0, 0, 30); Status.Position = UDim2.new(0, 0, 0.65, 0); Status.Text = "SYSTEM: READY"; Status.TextColor3 = Color3.new(1,1,1); Status.Font = "Code"; Status.TextSize = 14; Status.BackgroundTransparency = 1
 
-local Toggle = Instance.new("TextButton", Main); Toggle.Size = UDim2.new(0.8, 0, 0, 50); Toggle.Position = UDim2.new(0.1, 0, 0.8, 0); Toggle.Text = "START FARM"; Toggle.BackgroundColor3 = Color3.fromRGB(45, 0, 0); Toggle.TextColor3 = Color3.new(1,1,1); Toggle.Font = "GothamBlack"; Instance.new("UICorner", Toggle)
+local StartBtn = Instance.new("TextButton", Main); StartBtn.Size = UDim2.new(0.8, 0, 0, 45); StartBtn.Position = UDim2.new(0.1, 0, 0.8, 0); StartBtn.Text = "START HEIST"; StartBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35); StartBtn.TextColor3 = Color3.new(1,1,1); StartBtn.Font = "GothamBold"; Instance.new("UICorner", StartBtn)
 
--- --- LOGGING ---
-local function Log(msg, isErr)
-    local l = Instance.new("TextLabel", DebugFrame); l.Size = UDim2.new(1, -10, 0, 18); l.Text = "> " .. msg; l.TextColor3 = isErr and Color3.new(1,0.2,0.2) or Color3.new(0.7,0.7,0.7); l.Font = "Code"; l.TextSize = 10; l.BackgroundTransparency = 1; l.TextXAlignment = "Left"
-    DebugFrame.CanvasPosition = Vector2.new(0, 9999)
+-- --- UTILS ---
+local function Log(msg, err)
+    local t = Instance.new("TextLabel", Console); t.Size = UDim2.new(1, 0, 0, 15); t.Text = "> " .. msg; t.TextColor3 = err and Color3.new(1,0,0) or Color3.new(0.7,0.7,0.7); t.Font = "Code"; t.TextSize = 10; t.BackgroundTransparency = 1; t.TextXAlignment = "Left"
+    Console.CanvasPosition = Vector2.new(0, 9999)
 end
 
--- --- HARDWARE & TOOL LOGIC ---
-
-local function EquipByHotkey(slot)
-    local keys = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three}
-    VirtualInputManager:SendKeyEvent(true, keys[slot], false, game)
-    task.wait(0.1)
-    VirtualInputManager:SendKeyEvent(false, keys[slot], false, game)
-end
-
-local function MultiEquip(toolName, slotFallback)
+local function SmartEquip(name, slot)
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local hum = char:WaitForChild("Humanoid")
+    local tool = LocalPlayer.Backpack:FindFirstChild(name) or char:FindFirstChild(name)
     
-    -- Method 1: Name Check
-    local tool = LocalPlayer.Backpack:FindFirstChild(toolName)
-    if tool then 
-        hum:EquipTool(tool)
-        task.wait(0.3)
+    if tool then
+        char.Humanoid:EquipTool(tool)
+    else
+        -- Mobile/Delta Hotkey Force
+        local keys = {Enum.KeyCode.One, Enum.KeyCode.Two}
+        VirtualInputManager:SendKeyEvent(true, keys[slot], false, game)
+        task.wait(0.1)
+        VirtualInputManager:SendKeyEvent(false, keys[slot], false, game)
     end
-    
-    -- Method 2: Hotkey Fallback
-    if not char:FindFirstChild(toolName) then
-        Log("NAME EQUIP FAILED, TRYING KEY: " .. slotFallback)
-        EquipByHotkey(slotFallback)
-        task.wait(0.5)
-    end
-    
-    if char:FindFirstChildOfClass("Tool") then
-        Log("SUCCESS: TOOL ACTIVE")
-        return true
-    end
-    Log("ERROR: COULD NOT EQUIP " .. toolName, true)
-    return false
+    task.wait(0.5)
+    return char:FindFirstChildOfClass("Tool")
 end
 
--- --- TELEPORT LOGIC ---
-
-local function TeleportToFront(part)
-    local char = LocalPlayer.Character
-    local root = char.HumanoidRootPart
-    -- Calculate position 4 studs in front of the door's face
-    local offset = part.CFrame.LookVector * 4
-    root.CFrame = CFrame.new(part.Position + offset, part.Position)
-    Log("TP: FRONT OF " .. part.Name)
+local function GetSafePosition(targetPart)
+    -- This calculates a spot 6 studs away from the part's face so we aren't "inside" it
+    local direction = (LocalPlayer.Character.HumanoidRootPart.Position - targetPart.Position).Unit
+    return targetPart.Position + (direction * 6)
 end
 
-local function ServerHop()
-    Log("SEARCHING FOR NEW SERVER...")
-    local success, result = pcall(function()
-        local data = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
-        for _, v in pairs(data.data) do
-            if v.playing < v.maxPlayers and v.id ~= game.JobId then
-                TeleportService:TeleportToPlaceInstance(game.PlaceId, v.id, LocalPlayer)
-                return
-            end
-        end
-    end)
-end
-
--- --- MAIN SCRIPT ---
-
-local function StartHeist()
+-- --- MAIN CORE ---
+local function HeistProcess()
     getgenv().Uqi.StartTime = tick()
-    local char = LocalPlayer.Character
-    local root = char:WaitForChild("HumanoidRootPart")
+    local root = LocalPlayer.Character.HumanoidRootPart
 
-    -- 1. Vault Breach
-    Log("PHASE 1: BREACHING")
+    -- PHASE 1: VAULT
+    Log("MOVING TO VAULT")
     root.CFrame = CFrame.new(getgenv().Uqi.VaultPos)
     task.wait(1)
-    
-    if MultiEquip(getgenv().Uqi.FlameTool, 1) then
+
+    if SmartEquip(getgenv().Uqi.FlameTool, 1) then
+        Log("BREACHING DOOR")
+        root.CFrame = CFrame.new(root.Position, getgenv().Uqi.VaultPos)
         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
         task.wait(6)
         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-        Log("DOOR BREACHED")
     end
 
-    -- 2. Multi-Safe Rotation
-    Log("PHASE 2: 2-MINUTE FARM")
+    -- PHASE 2: 2 MIN FARM
+    Log("STARTING 2-MIN CYCLE")
     while (tick() - getgenv().Uqi.StartTime) < getgenv().Uqi.StayDuration and getgenv().Uqi.Active do
-        local remaining = math.floor(getgenv().Uqi.StayDuration - (tick() - getgenv().Uqi.StartTime))
-        TimerLbl.Text = "SERVER HOP IN: " .. remaining .. "s"
+        local elapsed = math.floor(getgenv().Uqi.StayDuration - (tick() - getgenv().Uqi.StartTime))
+        Status.Text = "HOPPING IN: " .. elapsed .. "s"
 
-        -- Tool Maintenance
-        if not char:FindFirstChildOfClass("Tool") then
-            MultiEquip(getgenv().Uqi.GunTool, 2)
-        end
-
-        -- Find Target
+        -- Search for targets
         local target = nil
         for _, v in pairs(Workspace:GetDescendants()) do
             if (v.Name == "Door" or v.Name == "Safe" or v.Name == "VaultDoor") and v:IsA("BasePart") then
                 if (v.Position - root.Position).Magnitude < 50 then
-                    target = v
-                    break
+                    target = v; break
                 end
             end
         end
 
         if target then
-            TeleportToFront(target)
+            -- Teleport to Safe Distance
+            root.CFrame = CFrame.new(GetSafePosition(target), target.Position)
+            if not LocalPlayer.Character:FindFirstChildOfClass("Tool") then SmartEquip(getgenv().Uqi.GunTool, 2) end
             VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
         end
 
-        -- CASH PICKUP (TELEPORT METHOD)
+        -- CASH PICKUP (SPOOF)
         for _, cash in pairs(Workspace:GetChildren()) do
-            if (cash.Name == "DroppedCash" or cash.Name == "Cash") and (cash.Position - root.Position).Magnitude < 40 then
-                Log("COLLECTING CASH")
+            if cash.Name == "DroppedCash" and (cash.Position - root.Position).Magnitude < 30 then
+                Log("SPOOFING CASH")
                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-                local preTP = root.CFrame
+                local old = root.CFrame
                 root.CFrame = cash.CFrame
                 task.wait(0.2)
-                -- Spoof click
                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
                 task.wait(0.05)
                 VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
                 task.wait(0.1)
-                root.CFrame = preTP
+                root.CFrame = old
             end
         end
         task.wait(0.5)
     end
 
-    Log("TIME EXPIRED. HOPPING.")
-    ServerHop()
+    Log("STAY OVER. HOPPING.")
+    -- Server Hop Logic
+    local data = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+    for _, v in pairs(data.data) do
+        if v.playing < v.maxPlayers and v.id ~= game.JobId then
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, v.id, LocalPlayer)
+            break
+        end
+    end
 end
 
-Toggle.MouseButton1Click:Connect(function()
+-- --- BUTTON & DRAG ---
+StartBtn.MouseButton1Click:Connect(function()
     if not getgenv().Uqi.Active then
         getgenv().Uqi.Active = true
-        Toggle.Text = "STOP SYSTEM"
-        Log("INITIATING HEIST...")
-        task.spawn(StartHeist)
+        StartBtn.Text = "STOP"
+        task.spawn(HeistProcess)
     else
         getgenv().Uqi.Active = false
-        Toggle.Text = "START FARM"
-        Log("STOPPED BY USER")
+        StartBtn.Text = "START HEIST"
     end
 end)
 
--- Draggable UI
-local drag, dStart, sPos
-Main.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then drag = true; dStart = i.Position; sPos = Main.Position end end)
-RunService.Heartbeat:Connect(function() if drag then local mPos = game:GetService("UserInputService"):GetMouseLocation(); Main.Position = UDim2.new(sPos.X.Scale, sPos.X.Offset + (mPos.X - dStart.X), sPos.Y.Scale, sPos.Y.Offset + (mPos.Y - dStart.Y)) end end)
-game:GetService("UserInputService").InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then drag = false end end)
+-- Draggable Logic (Delta/Mobile Compatible)
+local dragging, dragInput, dragStart, startPos
+Main.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true; dragStart = input.Position; startPos = Main.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
